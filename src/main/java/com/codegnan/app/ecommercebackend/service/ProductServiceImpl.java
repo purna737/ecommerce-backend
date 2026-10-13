@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codegnan.app.ecommercebackend.dao.ProductDao;
@@ -20,9 +21,11 @@ import com.codegnan.app.ecommercebackend.entity.Product;
 public class ProductServiceImpl implements ProductService {
 
 	private ProductDao productDao;
+	private final JdbcTemplate jdbcTemplate;
 
-	public ProductServiceImpl(ProductDao productDao) {
+	public ProductServiceImpl(ProductDao productDao, JdbcTemplate jdbcTemplate) {
 		this.productDao = productDao;
+		this.jdbcTemplate = jdbcTemplate;
 	}
 
 	@Override
@@ -52,7 +55,12 @@ public class ProductServiceImpl implements ProductService {
 
 		product.setCategories(new HashSet<Category>());
 
-		return productDao.addProduct(product);
+		boolean created = productDao.addProduct(product);
+		if (created && product.getProductId() != null) {
+			// New products start with zero stock; an administrator adds stock in Inventory Management.
+			jdbcTemplate.update("INSERT IGNORE INTO inventory(product_id, quantity, reorder_level, updated_at, version) VALUES(?, 0, 5, CURRENT_TIMESTAMP(6), 0)", product.getProductId());
+		}
+		return created;
 	}
 
 	

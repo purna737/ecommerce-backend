@@ -1,6 +1,7 @@
 package com.codegnan.app.ecommercebackend.dao;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 
 import org.springframework.stereotype.Repository;
@@ -64,7 +65,10 @@ public class ProductDaoImpl implements ProductDao {
 		Product product = entityManager.find(Product.class, productId);
 
 		if (product != null) {
-			entityManager.remove(product);
+			// Preserve order/review foreign-key history by deactivating instead of hard deleting.
+			product.setStatus("INACTIVE");
+			product.setUpdatedAt(LocalDateTime.now());
+			entityManager.merge(product);
 			return true;
 		}
 
